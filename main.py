@@ -7,7 +7,7 @@ SDA_PIN = const(14)
 I2C_ID = const(1)
 
 while True:
-    #bmp180 = BMP180(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)
+    bmp180 = BMP180(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)
     adxl345 = ADXL345(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)
-    print(adxl345.xValue,adxl345.yValue,adxl345.zValue)
-    #print(bmp180.temperature)
+    print(adxl345.xValue, adxl345.yValue, adxl345.zValue)
+    print(bmp180.temperature)
