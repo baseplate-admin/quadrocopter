@@ -85,8 +85,3 @@ class ADXL345:
             "y": __y,
             "z": __z,
         }
-
-    def RP_calculate(self, x, y, z):
-        roll = math.atan2(y, z) * 57.3
-        pitch = math.atan2((-x), math.sqrt(y * y + z * z)) * 57.3
-        return roll, pitch

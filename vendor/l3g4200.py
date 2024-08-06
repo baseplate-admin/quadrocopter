@@ -30,9 +30,9 @@ class L3G4200:
 
         self.i2c.writeto_mem(self.address, self.CTRL_REG3, bytearray([0b00001000]))
 
-        if self.deg_sec is 250:
+        if self.deg_sec == 250:
             self.i2c.writeto_mem(self.address, self.CTRL_REG4, bytearray([0b00000000]))
-        elif self.deg_sec is 500:
+        elif self.deg_sec == 500:
             self.i2c.writeto_mem(self.address, self.CTRL_REG4, bytearray([0b00010000]))
         else:
             self.i2c.writeto_mem(self.address, self.CTRL_REG4, bytearray([0b00110000]))
