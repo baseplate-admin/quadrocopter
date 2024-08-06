@@ -2,7 +2,7 @@ from machine import Pin
 from vendor.bmp180 import BMP180
 from vendor.adxl345 import ADXL345
 from vendor.l3g4200 import L3G4200
-
+from functions.calculator import RP_calculate
 import time
 
 SCL_PIN = const(21)
@@ -16,16 +16,12 @@ adxl345 = ADXL345(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)
 
 l3g4200d = L3G4200(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)
 
-while True:
-    # print(
-    #    (
-    #        adxl345.x,
-    #        adxl345.y,
-    #        adxl345.z,
-    #    )
-    # )
-    # print(adxl345.mean())
-    print(l3g4200d.xyz_values())
 
+while True:
+    print(
+        RP_calculate(
+            l3g4200d.xyz_values["x"], l3g4200d.xyz_values["y"], l3g4200d.xyz_values["z"]
+        )
+    )
     time.sleep(1)
-    # print(bmp180.temperature)
+    

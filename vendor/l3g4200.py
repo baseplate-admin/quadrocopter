@@ -53,6 +53,7 @@ class L3G4200:
         val = self.__convert_val((self.dataH[0] << 8) | self.dataL[0])
         return val
 
+    @property
     def xyz_values(self):
         # outputs dict of xyz values
         x = self.__read_val(self.OUT_X_L, self.OUT_X_H)
