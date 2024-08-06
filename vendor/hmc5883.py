@@ -7,7 +7,7 @@ from ustruct import pack
 from array import array
 
 
-I2C_ADDR = const(0x1E)
+I2C_ADDR = const(0x30)
 
 
 class HMC5883L:
@@ -34,13 +34,12 @@ class HMC5883L:
         self.i2c = i2c = I2C(i2c_id, scl=Pin(scl), sda=Pin(sda), freq=100000)
 
         # Initialize sensor.
-        i2c.start()
 
         # Configuration register A:
         #   0bx11xxxxx  -> 8 samples averaged per measurement
         #   0bxxx100xx  -> 15 Hz, rate at which data is written to output registers
         #   0bxxxxxx00  -> Normal measurement mode
-        i2c.writeto_mem(I2C_ADDR, 0x00, pack("B", 0b111000))
+        i2c.writeto_mem(I2C_ADDR, 0x70, pack("B", 0b1110000))
 
         # Configuration register B:
         reg_value, self.gain = self.__gain__[gauss]
@@ -48,7 +47,6 @@ class HMC5883L:
 
         # Set mode register to continuous mode.
         i2c.writeto_mem(address, 0x02, pack("B", 0x00))
-        i2c.stop()
 
         # Convert declination (tuple of degrees and minutes) to radians.
         self.declination = (declination[0] + declination[1] / 60) * math.pi / 180
