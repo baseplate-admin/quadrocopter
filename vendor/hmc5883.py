@@ -1,8 +1,13 @@
 import math
-import machine
+
+# import machine
+from machine import Pin, I2C
 
 from ustruct import pack
 from array import array
+
+
+I2C_ADDR = const(0x1E)
 
 
 class HMC5883L:
@@ -18,24 +23,32 @@ class HMC5883L:
     }
 
     def __init__(
-        self, scl=21, sda=20, address=0x30, gauss="0.88", declination=(0, -37)
+        self,
+        scl,
+        sda,
+        i2c_id,
+        address=I2C_ADDR,
+        gauss="1.3",
+        declination=(0, 0),
     ):
-        self.i2c = i2c = machine.I2C(
-            0, scl=machine.Pin(scl), sda=machine.Pin(sda), freq=100000
-        )
+        self.i2c = i2c = I2C(i2c_id, scl=Pin(scl), sda=Pin(sda), freq=100000)
+
+        # Initialize sensor.
+        i2c.start()
 
         # Configuration register A:
         #   0bx11xxxxx  -> 8 samples averaged per measurement
         #   0bxxx100xx  -> 15 Hz, rate at which data is written to output registers
         #   0bxxxxxx00  -> Normal measurement mode
-        i2c.writeto_mem(0x30, 0x00, pack("B", 0b111000))
+        i2c.writeto_mem(I2C_ADDR, 0x00, pack("B", 0b111000))
 
         # Configuration register B:
         reg_value, self.gain = self.__gain__[gauss]
-        i2c.writeto_mem(0x30, 0x01, pack("B", reg_value))
+        i2c.writeto_mem(address, 0x01, pack("B", reg_value))
 
         # Set mode register to continuous mode.
-        i2c.writeto_mem(0x30, 0x02, pack("B", 0x00))
+        i2c.writeto_mem(address, 0x02, pack("B", 0x00))
+        i2c.stop()
 
         # Convert declination (tuple of degrees and minutes) to radians.
         self.declination = (declination[0] + declination[1] / 60) * math.pi / 180
@@ -47,7 +60,7 @@ class HMC5883L:
         data = self.data
         gain = self.gain
 
-        self.i2c.readfrom_mem_into(0x30, 0x03, data)
+        self.i2c.readfrom_mem_into(I2C_ADDR, 0x03, data)
 
         x = (data[0] << 8) | data[1]
         z = (data[2] << 8) | data[3]
