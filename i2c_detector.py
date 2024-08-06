@@ -2,7 +2,7 @@
 from machine import Pin, SoftI2C
 
 # You can choose any other combination of I2C pins
-i2c = SoftI2C(scl=Pin(15), sda=Pin(14))
+i2c = SoftI2C(scl=Pin(21), sda=Pin(20))
 
 print('I2C SCANNER')
 devices = i2c.scan()
