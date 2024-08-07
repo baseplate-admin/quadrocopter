@@ -1,14 +1,14 @@
-from machine import I2C, Pin
+from machine import I2C
 import math
-import time
+from micropython import const
 
-MMC_ADDRESS = 0x30  # I2C address of MMC5883MC
+MMC_ADDRESS = const(0x30)  # I2C address of MMC5883MC
 
-COMPASS_CONFIG_REGISTER = 0x08
-COMPASS_THRESHOLD_REGISTER = 0x0B
-COMPASS_STATUS_REGISTER = 0x07
-COMPASS_DATA_REGISTER = 0x00
-Product_ID = 0x2F
+COMPASS_CONFIG_REGISTER = const(0x08)
+COMPASS_THRESHOLD_REGISTER = const(0x0B)
+COMPASS_STATUS_REGISTER = const(0x07)
+COMPASS_DATA_REGISTER = const(0x00)
+Product_ID = const(0x2F)
 
 
 class MMC5883MA:
@@ -132,7 +132,3 @@ class MMC5883MA:
 
     def combine_bytes(self, msb, lsb):
         return (msb << 8) + lsb
-
-
-# Example usage:
-# i2c = I2C(0, scl=Pin(21), sda=Pin(20))

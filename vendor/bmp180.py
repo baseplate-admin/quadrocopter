@@ -38,7 +38,8 @@ THE SOFTWARE.
 from ustruct import unpack as unp
 import math
 import time
-from machine import Pin, I2C
+from machine import I2C
+from micropython import const
 
 
 I2C_ADDR = const(0x77)

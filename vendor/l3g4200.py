@@ -1,4 +1,5 @@
-from machine import Pin, I2C
+from machine import I2C
+from micropython import const
 
 I2C_ADDR = const(0x69)
 
