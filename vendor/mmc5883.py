@@ -83,38 +83,29 @@ class MMC5883MA:
             self.combine_bytes(data[2], data[3]),
             self.combine_bytes(data[4], data[5]),
         )
-
-        if self.__xMax != self.__xMin:
-            self.__x = (
-                2.0 * (float(self.sx - self.__xMin) / (self.__xMax - self.__xMin)) - 1.0
-            )
-        else:
-            self.__x = 0.0
-
-        if self.__yMax != self.__yMin:
-            self.__y = (
-                2.0 * (float(self.sy - self.__yMin) / (self.__yMax - self.__yMin)) - 1.0
-            )
-        else:
-            self.__y = 0.0
-
-        if self.__zMax != self.__zMin:
-            self.__z = (
-                2.0 * (float(self.sz - self.__zMin) / (self.__zMax - self.__zMin)) - 1.0
-            )
-        else:
-            self.__z = 0.0
+        self.__x = (
+            2.0 * (float(self.sx - self.__xMin) / (self.__xMax - self.__xMin)) - 1.0
+        )
+        self.__y = (
+            2.0 * (float(self.sy - self.__yMin) / (self.__yMax - self.__yMin)) - 1.0
+        )
+        self.__z = (
+            2.0 * (float(self.sz - self.__zMin) / (self.__zMax - self.__zMin)) - 1.0
+        )
 
     @property
     def x(self):
+        self.update()
         return self.__x
 
     @property
     def y(self):
+        self.update()
         return self.__y
 
     @property
     def z(self):
+        self.update()
         return self.__z
 
     def getAngle(self):
@@ -127,10 +118,6 @@ class MMC5883MA:
                 else:
                     self.angle = 57.2958 * math.atan(self.__y / self.__x) + 180.0
         return self.angle
-
-    def readData(self):
-        self.update()
-        return f"Mag X:{self.__x}\tY:{self.__y}\tZ:{self.__z}"
 
     def write_byte(self, addr, reg, data):
         self.i2c.writeto_mem(addr, reg, bytes([data]))

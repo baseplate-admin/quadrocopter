@@ -26,11 +26,13 @@ mmc5883.calibrate()
 
 
 _interval = 1000  # 1ms = 1/.001 = 1000hz
-delta_t = 1 / (1 / _interval)
+delta_t = 1 / _interval
+
+pitch = 0
+roll = 0
+yaw = 0
 
 while True:
-    mmc5883.readData()
-
     accel_x, accel_y, accel_z = adxl345.x, adxl345.y, adxl345.z
     mag_x, mag_y, mag_z = mmc5883.x, mmc5883.y, mmc5883.z
     gyro_x, gyro_y, gyro_z = (
@@ -59,10 +61,11 @@ while True:
     roll_gyro = omega_x * delta_t
     yaw_gyro = omega_z * delta_t
 
+
     pitch = pitch_acc
     roll = roll_acc
     yaw = yaw_mag
-
+    
     # Combine gyroscope data for relative changes
     pitch += pitch_gyro
     roll += roll_gyro
