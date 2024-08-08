@@ -12,12 +12,7 @@ Product_ID = const(0x2F)
 
 
 class MMC5883MA:
-    def __init__(
-        self,
-        scl,
-        sda,
-        i2c_id,
-    ):
+    def __init__(self, scl, sda, i2c_id):
         self.i2c = I2C(i2c_id, scl=scl, sda=sda, freq=100000)
         self.ID = 0
         self.reg = 0
@@ -31,6 +26,9 @@ class MMC5883MA:
         self.__y = 0.0
         self.__z = 0.0
         self.angle = 0.0
+        self.sx = 0
+        self.sy = 0
+        self.sz = 0
 
         self.begin()
 
