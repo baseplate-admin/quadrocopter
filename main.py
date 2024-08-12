@@ -8,6 +8,16 @@ import math
 from machine import Pin
 from micropython import const
 
+
+# soft_iron_matrix = [
+#     [2.774, -1.258, 0.836],  # Scale x, no cross-coupling
+#     [-1.258, 1.227, -0.475],  # Scale y, no cross-coupling
+#     [0.836, -0.475, 0.0815]   # Scale z, no cross-coupling
+# ]
+# hard_iron_offset = (30.92,42.60,-14.61)
+soft_iron_matrix = None
+hard_iron_offset = (0,0,0)
+
 led = Pin(25, Pin.OUT)
 
 SCL_PIN = const(21)
@@ -18,7 +28,7 @@ bmp180 = BMP180(
     sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID
 )  #  Pressure/Temperature/Altitude Sensor
 adxl345 = ADXL345(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)  # accelerometer
-mmc5883 = MMC5883MA(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)  # magnetometer
+mmc5883 = MMC5883MA(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID,hard_iron_offset=hard_iron_offset,soft_iron_matrix=soft_iron_matrix)  # magnetometer
 l3g4200d = L3G4200(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), i2c_id=I2C_ID)  # gyro
 
 
@@ -28,6 +38,8 @@ delta_t = 1 / _interval
 pitch = 0
 roll = 0
 yaw = 0
+
+
 
 while True:
     # mmc5883.update()
