@@ -33,6 +33,7 @@ roll = 0
 yaw = 0
 
 while True:
+    mmc5883.update()
     accel_x, accel_y, accel_z = adxl345.x, adxl345.y, adxl345.z
     mag_x, mag_y, mag_z = mmc5883.x, mmc5883.y, mmc5883.z
     gyro_x, gyro_y, gyro_z = (

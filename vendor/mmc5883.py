@@ -93,17 +93,14 @@ class MMC5883MA:
 
     @property
     def x(self):
-        self.update()
         return self.__x
 
     @property
     def y(self):
-        self.update()
         return self.__y
 
     @property
     def z(self):
-        self.update()
         return self.__z
 
     def getAngle(self):
