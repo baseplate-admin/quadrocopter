@@ -1,127 +1,112 @@
-from machine import I2C
-import math
-from micropython import const
+from machine import I2C, Pin
+import time
 
-MMC_ADDRESS = const(0x30)  # I2C address of MMC5883MC
+MMC5883MA_I2C_ADDR = 0x30  # I2C address of the MMC5883MA sensor
 
-COMPASS_CONFIG_REGISTER = const(0x08)
-COMPASS_THRESHOLD_REGISTER = const(0x0B)
-COMPASS_STATUS_REGISTER = const(0x07)
-COMPASS_DATA_REGISTER = const(0x00)
-Product_ID = const(0x2F)
+# MMC5883MA Registers
+MMC5883MA_XOUT0 = 0x00
+MMC5883MA_XOUT1 = 0x01
+MMC5883MA_YOUT0 = 0x02
+MMC5883MA_YOUT1 = 0x03
+MMC5883MA_ZOUT0 = 0x04
+MMC5883MA_ZOUT1 = 0x05
+MMC5883MA_STATUS = 0x07
+MMC5883MA_CONTROL0 = 0x08
+MMC5883MA_CONTROL1 = 0x09
+MMC5883MA_PRODUCT_ID = 0x2F
 
 
 class MMC5883MA:
-    def __init__(self, scl, sda, i2c_id):
-        self.i2c = I2C(i2c_id, scl=scl, sda=sda, freq=100000)
-        self.ID = 0
-        self.reg = 0
-        self.__xMax = 0
-        self.__xMin = 0
-        self.__yMax = 0
-        self.__yMin = 0
-        self.__zMax = 0
-        self.__zMin = 0
-        self.__x = 0.0
-        self.__y = 0.0
-        self.__z = 0.0
-        self.angle = 0.0
-        self.sx = 0
-        self.sy = 0
-        self.sz = 0
+    def __init__(
+        self,
+        scl,
+        sda,
+        i2c_id,
+        addr=MMC5883MA_I2C_ADDR,
+        hard_iron_offset=(0, 0, 0),
+        soft_iron_matrix=None,
+    ):
+        self.i2c = I2C(i2c_id, scl=scl, sda=sda)
+        self.addr = addr
 
-        self.begin()
+        # Hard iron offsets (x_offset, y_offset, z_offset)
+        self.hard_iron_offset = hard_iron_offset
 
-    def begin(self):
-        self.write_byte(MMC_ADDRESS, COMPASS_CONFIG_REGISTER, COMPASS_CONFIG_REGISTER)
-        self.ID = self.read_byte(MMC_ADDRESS, Product_ID)
-        # print("ID = ", self.ID)
+        # Soft iron correction matrix (3x3 matrix)
+        if soft_iron_matrix is None:
+            # If not provided, use the identity matrix (no soft iron correction)
+            self.soft_iron_matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        else:
+            self.soft_iron_matrix = soft_iron_matrix
 
-    def calibrate(self):
-        count = 0
-        print("Please wait until calibration is done!")
-        while count < 10000:
-            self.write_byte(MMC_ADDRESS, COMPASS_CONFIG_REGISTER, 1)
-            while (self.reg & 1) == 0:
-                self.reg = self.read_byte(MMC_ADDRESS, COMPASS_STATUS_REGISTER)
+        # Check the product ID
+        product_id = self.i2c.readfrom_mem(self.addr, MMC5883MA_PRODUCT_ID, 1)[0]
+        if product_id != 0x0C:
+            raise ValueError("MMC5883MA not found")
 
-            data = self.read_bytes(MMC_ADDRESS, COMPASS_DATA_REGISTER, 6)
-            sx, sy, sz = (
-                self.combine_bytes(data[0], data[1]),
-                self.combine_bytes(data[2], data[3]),
-                self.combine_bytes(data[4], data[5]),
-            )
+        # Reset the sensor
+        self.i2c.writeto_mem(self.addr, MMC5883MA_CONTROL1, b"\x80")
+        time.sleep(0.01)
 
-            if count == 0:
-                self.__xMax = self.__xMin = sx
-                self.__yMax = self.__yMin = sy
-                self.__zMax = self.__zMin = sz
+    def read_data(self):
+        # Trigger a measurement
+        self.i2c.writeto_mem(self.addr, MMC5883MA_CONTROL0, b"\x01")
 
-            self.__xMax = max(self.__xMax, sx)
-            self.__xMin = min(self.__xMin, sx)
-            self.__yMax = max(self.__yMax, sy)
-            self.__yMin = min(self.__yMin, sy)
-            self.__zMax = max(self.__zMax, sz)
-            self.__zMin = min(self.__zMin, sz)
+        # Wait for the measurement to complete
+        while not (self.i2c.readfrom_mem(self.addr, MMC5883MA_STATUS, 1)[0] & 0x01):
+            time.sleep(0.001)
 
-            if (count % 1000) == 0:
-                print(".", end="")
-            count += 1
-        print(".")
+        # Read the X, Y, Z data
+        data = self.i2c.readfrom_mem(self.addr, MMC5883MA_XOUT0, 6)
 
-    def update(self):
-        self.reg = 0
-        self.write_byte(MMC_ADDRESS, COMPASS_CONFIG_REGISTER, 1)
-        while (self.reg & 1) == 0:
-            self.reg = self.read_byte(MMC_ADDRESS, COMPASS_STATUS_REGISTER)
+        x = (data[1] << 8) | data[0]
+        y = (data[3] << 8) | data[2]
+        z = (data[5] << 8) | data[4]
 
-        data = self.read_bytes(MMC_ADDRESS, COMPASS_DATA_REGISTER, 6)
-        self.sx, self.sy, self.sz = (
-            self.combine_bytes(data[0], data[1]),
-            self.combine_bytes(data[2], data[3]),
-            self.combine_bytes(data[4], data[5]),
+        # Convert to signed 16-bit integers
+        x = self._convert_to_signed(x)
+        y = self._convert_to_signed(y)
+        z = self._convert_to_signed(z)
+
+        # Apply hard iron offset correction
+        x -= self.hard_iron_offset[0]
+        y -= self.hard_iron_offset[1]
+        z -= self.hard_iron_offset[2]
+
+        # Apply soft iron correction
+        x_corr = (
+            x * self.soft_iron_matrix[0][0]
+            + y * self.soft_iron_matrix[0][1]
+            + z * self.soft_iron_matrix[0][2]
         )
-        self.__x = (
-            2.0 * (float(self.sx - self.__xMin) / (self.__xMax - self.__xMin)) - 1.0
+        y_corr = (
+            x * self.soft_iron_matrix[1][0]
+            + y * self.soft_iron_matrix[1][1]
+            + z * self.soft_iron_matrix[1][2]
         )
-        self.__y = (
-            2.0 * (float(self.sy - self.__yMin) / (self.__yMax - self.__yMin)) - 1.0
-        )
-        self.__z = (
-            2.0 * (float(self.sz - self.__zMin) / (self.__zMax - self.__zMin)) - 1.0
+        z_corr = (
+            x * self.soft_iron_matrix[2][0]
+            + y * self.soft_iron_matrix[2][1]
+            + z * self.soft_iron_matrix[2][2]
         )
 
-    @property
-    def x(self):
-        return self.__x
+        # Return the corrected data as a tuple
+        return x_corr, y_corr, z_corr
 
-    @property
-    def y(self):
-        return self.__y
+    def _convert_to_signed(self, val):
+        # Convert the unsigned 16-bit integer to signed
+        if val >= 32768:
+            return val - 65536
+        else:
+            return val
 
-    @property
-    def z(self):
-        return self.__z
+    def read_magnetic_field(self):
+        # Read the corrected data
+        x_corr, y_corr, z_corr = self.read_data()
 
-    def getAngle(self):
-        if self.__x != 0.0:
-            if self.__x > 0.0:
-                self.angle = 57.2958 * math.atan(self.__y / self.__x)
-            elif self.__x < 0.0:
-                if self.__y < 0.0:
-                    self.angle = 57.2958 * math.atan(self.__y / self.__x) - 180.0
-                else:
-                    self.angle = 57.2958 * math.atan(self.__y / self.__x) + 180.0
-        return self.angle
+        # Convert to microteslas (1 count = 0.25 uT)
+        x_uT = x_corr * 0.25
+        y_uT = y_corr * 0.25
+        z_uT = z_corr * 0.25
 
-    def write_byte(self, addr, reg, data):
-        self.i2c.writeto_mem(addr, reg, bytes([data]))
-
-    def read_byte(self, addr, reg):
-        return self.i2c.readfrom_mem(addr, reg, 1)[0]
-
-    def read_bytes(self, addr, reg, count):
-        return self.i2c.readfrom_mem(addr, reg, count)
-
-    def combine_bytes(self, msb, lsb):
-        return (msb << 8) + lsb
+        return x_uT, y_uT, z_uT
